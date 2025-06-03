@@ -1,4 +1,4 @@
-vllm==0.5.3
+vllm==0.9.0.1
 gradio==4.44.0
 torch>=2.0.0
 transformers>=4.40.0

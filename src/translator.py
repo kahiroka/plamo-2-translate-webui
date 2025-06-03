@@ -20,7 +20,8 @@ class PLaMoTranslator:
                 model=self.model_name,
                 trust_remote_code=True,
                 max_model_len=2000,
-                max_num_batched_tokens=2000
+                max_num_batched_tokens=2000,
+                max_num_seqs=16
             )
             self.is_loaded = True
             print("Model loaded successfully!")
