@@ -24,24 +24,25 @@ class TranslationWebUI:
     
     def translate_handler(self, text, source_lang, target_lang):
         if not self.model_loaded:
-            return "Please load the model first by clicking 'Load Model'", ""
+            return "Please load the model first by clicking 'Load Model'", "", ""
         
         if len(text.strip()) == 0:
-            return "Please enter text to translate", ""
+            return "Please enter text to translate", "", ""
         
         token_count = len(text.split())
         if token_count > 500:
-            return f"Text too long ({token_count} words). Please limit to ~500 words for best results.", ""
+            return f"Text too long ({token_count} words). Please limit to ~500 words for best results.", "", ""
         
         start_time = time.time()
-        translation, error = self.translator.translate(text, source_lang, target_lang)
+        translation, error, token_counts = self.translator.translate(text, source_lang, target_lang)
         elapsed_time = time.time() - start_time
         
         if error:
-            return error, ""
+            return error, "", ""
         
         status = f"Translation completed in {elapsed_time:.2f} seconds"
-        return status, translation
+        token_info = f"Input tokens: {token_counts['input_tokens']} | Output tokens: {token_counts['output_tokens']}"
+        return status, translation, token_info
     
     def swap_languages(self, source_lang, target_lang, text, translation):
         return target_lang, source_lang, translation, text
@@ -96,6 +97,7 @@ class TranslationWebUI:
                 clear_btn = gr.Button("Clear", scale=1)
             
             status_output = gr.Textbox(label="Status", interactive=False)
+            token_info_output = gr.Textbox(label="Token Count", interactive=False)
             
             with gr.Accordion("Tips", open=False):
                 gr.Markdown("""
@@ -114,7 +116,7 @@ class TranslationWebUI:
             translate_btn.click(
                 fn=self.translate_handler,
                 inputs=[source_text, source_lang, target_lang],
-                outputs=[status_output, translation_output]
+                outputs=[status_output, translation_output, token_info_output]
             )
             
             swap_btn.click(
@@ -124,8 +126,8 @@ class TranslationWebUI:
             )
             
             clear_btn.click(
-                fn=lambda: ("", "", ""),
-                outputs=[source_text, translation_output, status_output]
+                fn=lambda: ("", "", "", ""),
+                outputs=[source_text, translation_output, status_output, token_info_output]
             )
         
         return interface

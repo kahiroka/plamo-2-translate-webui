@@ -1,6 +1,7 @@
 import vllm
 from typing import Optional, Dict, Tuple
 import torch
+from transformers import AutoTokenizer
 
 
 class PLaMoTranslator:
@@ -8,6 +9,7 @@ class PLaMoTranslator:
         self.model_name = model_name
         self.llm = None
         self.is_loaded = False
+        self.tokenizer = None
         
     def load_model(self) -> bool:
         try:
@@ -23,6 +25,12 @@ class PLaMoTranslator:
                 max_num_batched_tokens=2000,
                 max_num_seqs=16
             )
+            
+            self.tokenizer = AutoTokenizer.from_pretrained(
+                self.model_name,
+                trust_remote_code=True
+            )
+            
             self.is_loaded = True
             print("Model loaded successfully!")
             return True
@@ -40,15 +48,17 @@ translation
 '''
         return prompt
     
-    def translate(self, text: str, source_lang: str = "English", target_lang: str = "Japanese") -> Tuple[str, Optional[str]]:
+    def translate(self, text: str, source_lang: str = "English", target_lang: str = "Japanese") -> Tuple[str, Optional[str], Dict[str, int]]:
         if not self.is_loaded:
-            return "", "Model not loaded. Please load the model first."
+            return "", "Model not loaded. Please load the model first.", {"input_tokens": 0, "output_tokens": 0}
         
         if not text.strip():
-            return "", "Please provide text to translate."
+            return "", "Please provide text to translate.", {"input_tokens": 0, "output_tokens": 0}
         
         try:
             prompt = self._create_prompt(text, source_lang, target_lang)
+            
+            input_tokens = len(self.tokenizer.encode(prompt))
             
             sampling_params = vllm.SamplingParams(
                 temperature=0,
@@ -60,12 +70,19 @@ translation
             
             if responses and len(responses) > 0:
                 translation = responses[0].outputs[0].text.strip()
-                return translation, None
+                output_tokens = len(self.tokenizer.encode(translation))
+                
+                token_counts = {
+                    "input_tokens": input_tokens,
+                    "output_tokens": output_tokens
+                }
+                
+                return translation, None, token_counts
             else:
-                return "", "No translation generated."
+                return "", "No translation generated.", {"input_tokens": input_tokens, "output_tokens": 0}
                 
         except Exception as e:
-            return "", f"Translation error: {str(e)}"
+            return "", f"Translation error: {str(e)}", {"input_tokens": 0, "output_tokens": 0}
     
     def get_model_info(self) -> Dict[str, any]:
         return {
